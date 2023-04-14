@@ -1,6 +1,5 @@
 ---
-title: Hello 算法 -- 第三章 -- 資料與內存
-image: https://www.hello-algo.com/index.assets/conceptual_rendering.png
+title: Hello算法, chap03資料結構, 01資料與內存
 description: Hello 算法第三章第一節
 tags: hello-algo
 ---
