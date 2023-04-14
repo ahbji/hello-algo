@@ -1,3 +1,10 @@
+---
+title: Hello Algo chapter 03 Data and Memory
+image: https://www.hello-algo.com/index.assets/conceptual_rendering.png
+description: Hello 算法第三章第一節
+tags: hello-algo
+---
+
 # 数据与内存
 
 ## 基本数据类型
