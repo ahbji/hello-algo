@@ -1,5 +1,5 @@
 ---
-title: Hello Algo chapter 03 Data and Memory
+title: Hello 算法 -- 第三章 -- 資料與內存
 image: https://www.hello-algo.com/index.assets/conceptual_rendering.png
 description: Hello 算法第三章第一節
 tags: hello-algo
