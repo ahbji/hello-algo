@@ -10,3 +10,5 @@ tags: hello-algo
 
 * 第三章：資料結構簡介 
   * [資料與內存](/@andreaji/DataAndMemory)
+  * [資料结构分类](/@andreaji/classification_of_data_structure)
+  * [小節](/@andreaji/data_struct_summery)
