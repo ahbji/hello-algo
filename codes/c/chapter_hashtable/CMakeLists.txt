@@ -1,1 +1,2 @@
 add_subdirectory(hashing)
+add_subdirectory(separatechaining)
