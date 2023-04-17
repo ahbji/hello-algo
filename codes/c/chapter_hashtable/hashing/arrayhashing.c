@@ -1,7 +1,7 @@
 /**
  * File: arrayhashing.c
  * Created Time: 2022-12-20
- * Author: MolDuM (moldum@163.com)
+ * Author: AndreaJi (andrea.hb.ji@outlook.com)
  */
 
 #include "../include/include.h"
