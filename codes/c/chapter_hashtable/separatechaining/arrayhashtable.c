@@ -152,6 +152,8 @@ void hashtable_clear(hashtable_t *ht)
         {
             entry_t *next = current->next;
             current->next = NULL;
+            current->key = 0;
+            free(current->val);
             free(current);
             current = next;
         }
@@ -163,7 +165,6 @@ void hashtable_clear(hashtable_t *ht)
 // 销毁哈希表
 void hashtable_destroy(hashtable_t *ht)
 {
-    // TODO 没有释放 Header 节点
     hashtable_clear(ht);
     free(ht->table);
     free(ht);
@@ -287,7 +288,7 @@ char *hashtable_insert(hashtable_t *ht, int key, char *val)
 
     entry_t *new_entry = (entry_t *)malloc(sizeof(entry_t));
     new_entry->key = key;
-    new_entry->val = val;
+    new_entry->val = strdup(val);
     unsigned int bucket_index = normalize_index(ht, key_hashcode(key, ht->size));
     return bucket_insert_entry(ht, bucket_index, new_entry);
 }
@@ -400,12 +401,14 @@ entry_t **hashtable_entryset(hashtable_t *ht)
     int cnt = 0;
     for (int i = 0; i < ht->capacity; i++)
     {
-        entry_t *current = ht->table[i];
-        while (current->next != NULL)
+        entry_t *current = ht->table[i]->next;
+        while (current != NULL)
         {
-            entry_t *next = current->next;
-            entrys[cnt++] = next;
-            current = next;
+            entry_t *dup = (entry_t *)malloc(sizeof(current));
+            dup->key = current->key;
+            dup->val = strdup(current->val);
+            entrys[cnt++] = dup;
+            current = current->next;
         }
     }
     return entrys;
@@ -423,6 +426,12 @@ void hashtable_print(hashtable_t *ht)
     {
         printf("\n%d -> %s", entrys[i]->key, entrys[i]->val);
     }
+    // 释放动态分配的内存
+    for (int i = 0; i < ht->size; i++)
+    {
+        free(entrys[i]);
+    }
+    free(entrys);
     printf("\n");
 }
 
