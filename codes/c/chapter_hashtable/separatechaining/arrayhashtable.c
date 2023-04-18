@@ -1,6 +1,6 @@
 /**
- * File: arrayhashing.c
- * Created Time: 2022-12-20
+ * File: arrayhashtable.c
+ * Created Time: 2023-4-17
  * Author: AndreaJi (andrea.hb.ji@outlook.com)
  */
 
@@ -28,135 +28,7 @@ typedef struct
     double max_load_factor;
 } hashtable_t;
 
-static unsigned int int_hashcode(int key, int size)
-{
-    // 将 int 类型的 key 转换为无符号整数
-    unsigned int u_key = (unsigned int)key;
-    // 直接对无符号整数取模得到哈希码
-    unsigned int hash = u_key % ++size;
-    return hash;
-}
-
-/* 构造 Hashtable */
-hashtable_t *hashtable_create(int capacity, double max_load_factor)
-{
-    if (capacity < 0)
-    {
-        printf("Illegal capacity\n");
-        return NULL;
-    }
-    if (max_load_factor <= 0 ||
-        max_load_factor != max_load_factor || // is not a number
-        isinf(max_load_factor))               // is infinite
-    {
-        printf("Illegal max load factor\n");
-        return NULL;
-    }
-
-    hashtable_t *hashtable = (hashtable_t *)malloc(sizeof(hashtable_t));
-    if (hashtable == NULL)
-    {
-        printf("Memory allocation failed for hashtable\n");
-        free(hashtable);
-        return NULL;
-    }
-    hashtable->capacity = DEFAULT_CAPACITY > capacity ? DEFAULT_CAPACITY : capacity; // Max within DEFAULT_CAPACITY and capacity
-    hashtable->max_load_factor = max_load_factor;
-    hashtable->threshold = (int)(hashtable->capacity * hashtable->max_load_factor);
-    hashtable->table = (entry_t **)malloc(hashtable->capacity * sizeof(entry_t *));
-    if (hashtable->table == NULL)
-    {
-        printf("Memory allocation failed for hashtable_t->table\n");
-        free(hashtable->table);
-        free(hashtable);
-        return NULL;
-    }
-    hashtable->size = 0;
-    for (int i = 0; i < hashtable->capacity; i++)
-        hashtable->table[i] = (entry_t *)malloc(sizeof(entry_t));
-    return hashtable;
-}
-
-// 释放哈希表的所有节点
-void hashtable_clear(hashtable_t *ht)
-{
-    if (ht == NULL)
-    {
-        return;
-    }
-    for (int i = 0; i < ht->capacity; i++)
-    {
-        entry_t *current = ht->table[i]->next;
-        while (current != NULL)
-        {
-            entry_t *next = current->next;
-            current->next = NULL;
-            free(current);
-            current = next;
-        }
-        ht->table[i]->next = NULL;
-    }
-    ht->size = 0;
-}
-
-// 销毁哈希表
-void hashtable_destroy(hashtable_t *ht)
-{
-    hashtable_clear(ht);
-    free(ht->table);
-    free(ht);
-}
-
-hashtable_t *hashtable_create2(int capacity)
-{
-    return hashtable_create(capacity, DEFAULT_LOAD_FACTOR);
-}
-
-hashtable_t *hashtable_create1()
-{
-    return hashtable_create(DEFAULT_CAPACITY, DEFAULT_LOAD_FACTOR);
-}
-
-int hashtable_size(hashtable_t *hashtable)
-{
-    return hashtable->size;
-}
-
-bool hashtable_is_empty(hashtable_t *hashtable)
-{
-    return hashtable->size == 0;
-}
-
-static unsigned int normalize_index(hashtable_t *hashtable, int keyHash)
-{
-    return (keyHash & 0x7FFFFFFF) % hashtable->capacity;
-}
-
-static entry_t *bucket_seek_entry(hashtable_t *ht, unsigned int bucket_index, int key)
-{
-    if (key == 0)
-        return NULL;
-    entry_t *header = ht->table[bucket_index];
-    if (header == NULL)
-        return NULL;
-    entry_t *entry = header->next;
-    for (; entry != NULL; entry = entry->next)
-        if (entry->key == key)
-            return entry;
-    return NULL;
-}
-
-bool has_key(hashtable_t *hashtable, int key)
-{
-    unsigned int bucket_index = normalize_index(hashtable, int_hashcode(key, hashtable->size));
-    return bucket_seek_entry(hashtable, bucket_index, key) != NULL;
-}
-
-bool contains_key(hashtable_t *hashtable, int key)
-{
-    return has_key(hashtable, key);
-}
-
+/* Linked List 操作*/
 static void list_append(entry_t **head, entry_t *new)
 {
     entry_t **indirect = head;
@@ -196,12 +68,160 @@ static char *list_remove(entry_t **head, entry_t *removal)
     return NULL;
 }
 
+/* 根据 Key 值计算 hashcode */
+static unsigned int key_hashcode(int key, int size)
+{
+    // 将 int 类型的 key 转换为无符号整数
+    unsigned int u_key = (unsigned int)key;
+    // 直接对无符号整数取模得到哈希码
+    unsigned int hash = u_key % ++size;
+    return hash;
+}
+
+/* 构造 Hashtable */
+hashtable_t *hashtable_create(int capacity, double max_load_factor)
+{
+    if (capacity < 0)
+    {
+        printf("Illegal capacity\n");
+        return NULL;
+    }
+    if (max_load_factor <= 0 ||
+        max_load_factor != max_load_factor || // is not a number
+        isinf(max_load_factor))               // is infinite
+    {
+        printf("Illegal max load factor\n");
+        return NULL;
+    }
+    // 初始化哈希表结构
+    hashtable_t *hashtable = (hashtable_t *)malloc(sizeof(hashtable_t));
+    if (hashtable == NULL)
+    {
+        printf("Memory allocation failed for hashtable\n");
+        free(hashtable);
+        return NULL;
+    }
+    hashtable->capacity = DEFAULT_CAPACITY > capacity ? DEFAULT_CAPACITY : capacity; // Max within DEFAULT_CAPACITY and capacity
+    hashtable->max_load_factor = max_load_factor;
+    hashtable->threshold = (int)(hashtable->capacity * hashtable->max_load_factor);
+    hashtable->table = (entry_t **)malloc(hashtable->capacity * sizeof(entry_t *));
+    if (hashtable->table == NULL)
+    {
+        printf("Memory allocation failed for hashtable_t->table\n");
+        free(hashtable->table);
+        free(hashtable);
+        return NULL;
+    }
+    hashtable->size = 0;
+    // 初始化 Bucket 链表数组
+    for (int i = 0; i < hashtable->capacity; i++)
+        // 初始化 Backet 链表
+        hashtable->table[i] = (entry_t *)malloc(sizeof(entry_t));
+    return hashtable;
+}
+
+/**
+ * 使用指定的 capacity 初始化 Hashtable 。
+ */
+hashtable_t *hashtable_create2(int capacity)
+{
+    return hashtable_create(capacity, DEFAULT_LOAD_FACTOR);
+}
+
+/**
+ * 使用默认 CAPACITY 3 和默认负载因子 0.75 初始化 Hasttable。
+ * 当 item 数超出 CAPACITY * LOAD_FACTOR 时，对 Hashtable 进行翻倍扩容。
+ */
+hashtable_t *hashtable_create1()
+{
+    return hashtable_create(DEFAULT_CAPACITY, DEFAULT_LOAD_FACTOR);
+}
+
+// 释放哈希表的所有节点
+void hashtable_clear(hashtable_t *ht)
+{
+    if (ht == NULL)
+    {
+        return;
+    }
+    // 释放除了 Header 之外的所有 entry_t 节点
+    for (int i = 0; i < ht->capacity; i++)
+    {
+        entry_t *current = ht->table[i]->next;
+        while (current != NULL)
+        {
+            entry_t *next = current->next;
+            current->next = NULL;
+            free(current);
+            current = next;
+        }
+        ht->table[i]->next = NULL;
+    }
+    ht->size = 0;
+}
+
+// 销毁哈希表
+void hashtable_destroy(hashtable_t *ht)
+{
+    // TODO 没有释放 Header 节点
+    hashtable_clear(ht);
+    free(ht->table);
+    free(ht);
+}
+
+// 返回哈希表中当前元素的数量。
+int hashtable_size(hashtable_t *hashtable)
+{
+    return hashtable->size;
+}
+
+// 根据哈希表是否为空，返回 true 或 false。
+bool hashtable_is_empty(hashtable_t *hashtable)
+{
+    return hashtable->size == 0;
+}
+
+// 将哈希值转换为索引。基本上，这会去除负号，并将哈希值放入域 [0, capacity) 中。
+static unsigned int normalize_index(hashtable_t *hashtable, int keyHash)
+{
+    return (keyHash & 0x7FFFFFFF) % hashtable->capacity;
+}
+
+// 根据 Key 在给定 bucket 中找到并返回特定条目（如果存在），否则返回 null 。
+static entry_t *bucket_seek_entry(hashtable_t *ht, unsigned int bucket_index, int key)
+{
+    if (key == 0)
+        return NULL;
+    entry_t *header = ht->table[bucket_index];
+    if (header == NULL)
+        return NULL;
+    entry_t *entry = header->next;
+    for (; entry != NULL; entry = entry->next)
+        if (entry->key == key)
+            return entry;
+    return NULL;
+}
+
+// 根据 Key 是否在哈希表中返回 true/false 。
+bool has_key(hashtable_t *hashtable, int key)
+{
+    unsigned int bucket_index = normalize_index(hashtable, key_hashcode(key, hashtable->size));
+    return bucket_seek_entry(hashtable, bucket_index, key) != NULL;
+}
+
+bool contains_key(hashtable_t *hashtable, int key)
+{
+    return has_key(hashtable, key);
+}
+
+// 调整 Hashtable 内部存储桶和条目的大小。
 static void resize_table(hashtable_t *ht)
 {
     int oldcapacity = ht->capacity;
     ht->capacity *= 2;
     ht->threshold = (int)ht->capacity * ht->max_load_factor;
 
+    // 初始化新的 bucket 数组
     entry_t **newtable = (entry_t **)malloc(ht->capacity * sizeof(entry_t *));
     if (newtable == NULL)
     {
@@ -211,6 +231,7 @@ static void resize_table(hashtable_t *ht)
     }
     for (int i = 0; i < ht->capacity; i++)
         newtable[i] = (entry_t *)malloc(sizeof(entry_t));
+    // 将现有 entry 迁移到新的 bucket 数组
     for (int i = 0; i < oldcapacity; i++)
     {
         if (ht->table[i] != NULL)
@@ -218,7 +239,8 @@ static void resize_table(hashtable_t *ht)
             entry_t *next = ht->table[i]->next;
             while (next != NULL)
             {
-                unsigned int bucket_index = normalize_index(ht, int_hashcode(next->key, ht->size));
+                // 重新计算 bucket_index
+                unsigned int bucket_index = normalize_index(ht, key_hashcode(next->key, ht->size));
                 entry_t *head = newtable[bucket_index];
                 entry_t *entry = next;
                 next = next->next;
@@ -227,11 +249,14 @@ static void resize_table(hashtable_t *ht)
             }
         }
         ht->table[i]->next = NULL;
+        // 释放旧 bucket 数组
         free(ht->table[i]);
     }
+    // 新 bucket 数组迁移到 Hashtable
     ht->table = newtable;
 }
 
+// 插入一个 entry 到给定的 bucket 中，只有当该 bucket 中不存在相同的键时才插入，如果存在相同的键则更新该键对应的值。
 static char *bucket_insert_entry(hashtable_t *ht, int bucket_index, entry_t *entry)
 {
     entry_t *header = ht->table[bucket_index];
@@ -241,7 +266,7 @@ static char *bucket_insert_entry(hashtable_t *ht, int bucket_index, entry_t *ent
         list_append(&header, entry);
         if (++(ht->size) > ht->threshold)
             resize_table(ht);
-        return NULL;
+        return NULL; // NULL 表示插入新的 entry
     }
     else
     {
@@ -251,6 +276,7 @@ static char *bucket_insert_entry(hashtable_t *ht, int bucket_index, entry_t *ent
     }
 }
 
+/* 添加操作 */
 char *hashtable_insert(hashtable_t *ht, int key, char *val)
 {
     if (key == 0)
@@ -262,11 +288,10 @@ char *hashtable_insert(hashtable_t *ht, int key, char *val)
     entry_t *new_entry = (entry_t *)malloc(sizeof(entry_t));
     new_entry->key = key;
     new_entry->val = val;
-    unsigned int bucket_index = normalize_index(ht, int_hashcode(key, ht->size));
+    unsigned int bucket_index = normalize_index(ht, key_hashcode(key, ht->size));
     return bucket_insert_entry(ht, bucket_index, new_entry);
 }
 
-/* 添加操作 */
 void hashtable_put(hashtable_t *ht, int key, char *val)
 {
     hashtable_insert(ht, key, val);
@@ -281,7 +306,7 @@ char *hashtable_get(hashtable_t *ht, int key)
         return NULL;
     }
 
-    int bucket_index = normalize_index(ht, int_hashcode(key, ht->size));
+    int bucket_index = normalize_index(ht, key_hashcode(key, ht->size));
     entry_t *entry = bucket_seek_entry(ht, bucket_index, key);
     if (entry != NULL)
         return entry->val;
@@ -313,7 +338,7 @@ char *hashtable_remove(hashtable_t *ht, int key)
         return NULL;
     }
 
-    unsigned int bucket_index = normalize_index(ht, int_hashcode(key, ht->size));
+    unsigned int bucket_index = normalize_index(ht, key_hashcode(key, ht->size));
     return bucket_remove_entry(ht, bucket_index, key);
 }
 
@@ -363,6 +388,29 @@ char **hashtable_valueset(hashtable_t *ht)
     return values;
 }
 
+/* 获取所有键值对 */
+entry_t **hashtable_entryset(hashtable_t *ht)
+{
+    entry_t **entrys = (entry_t **)malloc(ht->size * sizeof(entry_t *));
+    if (entrys == NULL)
+    {
+        printf("Failed to allocate memory for entrys array.\n");
+        return NULL;
+    }
+    int cnt = 0;
+    for (int i = 0; i < ht->capacity; i++)
+    {
+        entry_t *current = ht->table[i];
+        while (current->next != NULL)
+        {
+            entry_t *next = current->next;
+            entrys[cnt++] = next;
+            current = next;
+        }
+    }
+    return entrys;
+}
+
 /* 打印哈希表 */
 void hashtable_print(hashtable_t *ht)
 {
@@ -370,23 +418,12 @@ void hashtable_print(hashtable_t *ht)
     {
         return;
     }
-    for (int i = 0; i < ht->capacity; i++)
+    entry_t **entrys = hashtable_entryset(ht);
+    for (int i = 0; i < ht->size; i++)
     {
-        entry_t *current = ht->table[i];
-        while (current->next != NULL)
-        {
-            entry_t *next = current->next;
-            printf("\n%d -> %s", next->key, next->val);
-            current = next;
-        }
+        printf("\n%d -> %s", entrys[i]->key, entrys[i]->val);
     }
     printf("\n");
-}
-
-/* 获取所有键值对 */
-entry_t *hashtable_entryset(hashtable_t *ht, int *num_elements)
-{
-    return NULL;
 }
 
 int main()
